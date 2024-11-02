@@ -17,20 +17,79 @@ fn restaurant_page(url: &str) -> Html {
     Html::parse_document(&response.text().expect("Failed to read response text"))
 }
 
-fn parse_restaurant_info(document: &Html) {
+#[derive(Debug)]
+struct Restaurant {
+    id: u32,
+    name: String,
+    category: String,
+    address: String,
+}
+
+impl Restaurant {
+    fn new(id: u32, name: String, category: String, address: String) -> Self {
+        Restaurant {
+            id,
+            name,
+            category,
+            address,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct RestaurantParsedData {
+    name: String,
+    category: String,
+    address: String,
+}
+
+impl RestaurantParsedData {
+    fn new(name: String, category: String, address: String) -> Self {
+        RestaurantParsedData {
+            name,
+            category,
+            address,
+        }
+    }
+}
+
+fn parse_restaurant_info(document: &Html) -> RestaurantParsedData {
     // Example selectors, replace with actual selectors from the page
-    let name_selector = Selector::parse(".restaurant-name").unwrap();
-    let address_selector = Selector::parse(".restaurant-address").unwrap();
+    let table_selector = Selector::parse(".rstinfo-table").unwrap();
+    let table = document
+        .select(&table_selector)
+        .next()
+        .expect("Table not found");
 
-    if let Some(name_element) = document.select(&name_selector).next() {
-        let name = name_element.text().collect::<Vec<_>>().concat();
-        println!("Name: {}", name);
+    let name_selector = Selector::parse(".rstinfo-table__name-wrap").unwrap();
+    let name = if let Some(name_element) = table.select(&name_selector).next() {
+        name_element.text().collect::<Vec<_>>().concat()
+    } else {
+        String::new()
+    };
+    println!("Name: {}", name);
+
+    let mut category = String::new();
+    let mut address = String::new();
+    let table_rows = Selector::parse("tr").unwrap();
+    for row in table.select(&table_rows) {
+        let th = row.select(&Selector::parse("th").unwrap()).next();
+        let td = row.select(&Selector::parse("td").unwrap()).next();
+        if let (Some(th), Some(td)) = (th, td) {
+            let header_text = th.text().collect::<Vec<_>>().concat();
+            let header = header_text.trim();
+            if header == "Categories" {
+                category = td.text().collect::<Vec<_>>().concat();
+            } else if header == "Address" {
+                address = td.text().collect::<Vec<_>>().concat();
+            }
+        }
     }
 
-    if let Some(address_element) = document.select(&address_selector).next() {
-        let address = address_element.text().collect::<Vec<_>>().concat();
-        println!("Address: {}", address);
-    }
+    println!("Category: {}", category);
+    println!("Address: {}", address);
+
+    return RestaurantParsedData::new(name, category, address);
 }
 
 fn main() {
