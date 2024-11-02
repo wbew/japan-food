@@ -69,6 +69,14 @@ fn parse_restaurant_info(document: &Html) -> RestaurantParsedData {
     };
     println!("Name: {}", name);
 
+    let rating_selector = Selector::parse(".rdheader-rating__score-val-dtl").unwrap();
+    let rating = if let Some(rating_element) = document.select(&rating_selector).next() {
+        rating_element.text().collect::<Vec<_>>().concat()
+    } else {
+        String::new()
+    };
+    println!("Rating: {}", rating);
+
     let mut category = String::new();
     let mut address = String::new();
     let table_rows = Selector::parse("tr").unwrap();
@@ -81,7 +89,16 @@ fn parse_restaurant_info(document: &Html) -> RestaurantParsedData {
             if header == "Categories" {
                 category = td.text().collect::<Vec<_>>().concat();
             } else if header == "Address" {
-                address = td.text().collect::<Vec<_>>().concat();
+                let address_text = td.text().collect::<Vec<_>>().concat();
+                let address_filtered: String = address_text
+                    .chars()
+                    .filter(|c| !c.is_whitespace())
+                    .collect();
+                println!(
+                    "{:?}",
+                    address_filtered.replace("ShowlargermapFindnearbyrestaurants", "")
+                );
+                address = address_filtered.replace("ShowlargermapFindnearbyrestaurants", "");
             }
         }
     }
@@ -93,7 +110,7 @@ fn parse_restaurant_info(document: &Html) -> RestaurantParsedData {
 }
 
 fn main() {
-    let ids = restaurant_ids(13000001, 1);
+    let ids = restaurant_ids(13000001, 10);
 
     for id in ids {
         let url = format!("{}/{}", BASE_URL, id);
